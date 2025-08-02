@@ -8,14 +8,14 @@ import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "movies.db")
-POSTER_FALLBACK = os.path.join(BASE_DIR, "static", "no-poster.png")
+POSTER_FALLBACK = "no-poster.png"  # Will serve via StaticFiles
 MOVIE_PATH = os.getenv("MOVIE_PATH", "/mnt/Movies")
 
 app = FastAPI(root_path="/ML")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-print(">>> DEBUG: MovieList FastAPI starting up...", file=sys.stdout)
+print(">>> DEBUG: MovieList FastAPI starting...", file=sys.stdout)
 sys.stdout.flush()
 
 def get_db():
@@ -24,8 +24,6 @@ def get_db():
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, search: str = None, genre: str = None, actor: str = None, page: int = 1):
     conn = get_db()
-    print(">>> DEBUG: Connected to Database", file=sys.stdout)
-    sys.stdout.flush()
     cur = conn.cursor()
 
     limit = 100
@@ -57,8 +55,6 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
     actor_list = sorted({a.strip() for row in actors_raw for a in (row[0].split(",") if row[0] else []) if a.strip()})
 
     conn.close()
-    print(">>> DEBUG: Done with the database...", file=sys.stdout)
-    sys.stdout.flush()
     return templates.TemplateResponse("index.html", {
         "request": request,
         "movies": movies,
@@ -69,8 +65,6 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
 
 @app.get("/poster/{movie_id}")
 async def serve_poster(movie_id: int):
-    print(">>> DEBUG: Poster {movie_id} related", file=sys.stdout)
-    sys.stdout.flush()
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT poster FROM movies WHERE id=?", (movie_id,))
@@ -78,9 +72,9 @@ async def serve_poster(movie_id: int):
     conn.close()
 
     if not row or not row[0]:
-        print(f"[DEBUG] Poster missing for movie_id={movie_id}, fallback used", file=sys.stdout)
+        print(f"[DEBUG] Poster missing for movie_id={movie_id}", file=sys.stdout)
         sys.stdout.flush()
-        return FileResponse(POSTER_FALLBACK)
+        return FileResponse(os.path.join("static", POSTER_FALLBACK))
 
     poster_path = os.path.join(MOVIE_PATH, row[0])
     print(f"[DEBUG] Serving poster for movie_id={movie_id}, path={poster_path}", file=sys.stdout)
@@ -89,4 +83,4 @@ async def serve_poster(movie_id: int):
     if os.path.exists(poster_path):
         return FileResponse(poster_path)
     else:
-        return FileResponse(POSTER_FALLBACK)
+        return FileResponse(os.path.join("static", POSTER_FALLBACK))
