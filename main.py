@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from urllib.parse import unquote
 import sqlite3
 import os
 
@@ -54,3 +55,10 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
         "genres": genre_list,
         "actors": actor_list
     })
+
+@app.get("/posters/{path:path}")
+async def poster_proxy(path: str):
+    file_path = unquote(path)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return FileResponse("static/no-poster.png")
