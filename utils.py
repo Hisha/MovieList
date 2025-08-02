@@ -28,7 +28,7 @@ def extract_metadata(nfo_path):
     genres, actors = "", ""
     try:
         with open(nfo_path, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f.read(), "lxml")
+            soup = BeautifulSoup(f.read(), "xml")
             genres = ", ".join([g.text for g in soup.find_all("genre")]) or ""
             actors = ", ".join([a.text for a in soup.find_all("actor")]) or ""
     except Exception as e:
