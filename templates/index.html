@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Movie Library</title>
+    <title>My Movie Library</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #1c1c1c; color: #fff; }
-        .movie-card { background: #2a2a2a; border-radius: 10px; overflow: hidden; transition: transform 0.3s; }
+        body { background-color: #121212; color: #fff; }
+        .movie-card { background: #1f1f1f; border-radius: 8px; overflow: hidden; transition: transform 0.3s; }
         .movie-card:hover { transform: scale(1.05); cursor: pointer; }
         .movie-card img { width: 100%; height: 350px; object-fit: cover; }
-        .filter-bar { background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .badge { margin-right: 5px; }
+        .filter-bar { background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        h6 { margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -39,8 +39,8 @@
     <div class="row">
         {% for movie in movies %}
         <div class="col-md-3 mb-4">
-            <div class="movie-card" onclick="showDetails('{{ movie[1] }}', '/posters/{{ movie[3]|urlencode }}', '{{ movie[4] or '' }}', '{{ movie[5] or '' }}')">
-                <img src="/posters/{{ movie[3]|urlencode }}" class="card-img-top" alt="{{ movie[1] }}">
+            <div class="movie-card" onclick="showDetails('{{ movie[1] }}', '{{ movie[3] if movie[3] else '/static/no-poster.png' }}', '{{ movie[4] or 'N/A' }}', '{{ movie[5] or 'N/A' }}')">
+                <img src="/posters/{{ movie[3]|urlencode }}" alt="{{ movie[1] }}">
                 <div class="p-2 text-center">
                     <h6>{{ movie[1] }}</h6>
                 </div>
