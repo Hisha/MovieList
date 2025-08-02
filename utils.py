@@ -2,8 +2,12 @@ import os
 import sqlite3
 from datetime import datetime
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 
-DB_PATH = "movies.db"
+load_dotenv()
+MOVIE_PATH = os.getenv("MOVIE_PATH", "/mnt/Movies")
+DB_PATH = os.getenv("DB_PATH", "movies.db")
+
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
@@ -21,6 +25,7 @@ def init_db():
         """)
         conn.commit()
 
+
 def parse_nfo(nfo_path):
     try:
         with open(nfo_path, "r", encoding="utf-8") as f:
@@ -29,14 +34,14 @@ def parse_nfo(nfo_path):
             genres = ", ".join([g.text for g in soup.find_all("genre")])
             actors = ", ".join([a.text for a in soup.find_all("actor")])
             return title, genres, actors
-    except Exception as e:
-        print(f"[WARN] Failed to parse NFO {nfo_path}: {e}")
+    except Exception:
         return None, None, None
 
-def scan_movies(base_path="/mnt/Movies"):
+
+def scan_movies():
     movies = []
-    for folder_name in os.listdir(base_path):
-        folder_path = os.path.join(base_path, folder_name)
+    for folder_name in os.listdir(MOVIE_PATH):
+        folder_path = os.path.join(MOVIE_PATH, folder_name)
         if not os.path.isdir(folder_path):
             continue
 
@@ -63,6 +68,7 @@ def scan_movies(base_path="/mnt/Movies"):
         })
     return movies
 
+
 def add_movie_to_db(movie):
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
@@ -71,3 +77,49 @@ def add_movie_to_db(movie):
         VALUES (?, ?, ?, ?, ?, ?)
         """, (movie["title"], movie["folder"], movie["poster"], movie["genres"], movie["actors"], movie["added_at"]))
         conn.commit()
+
+
+def get_movies(search=None, genre=None, actor=None):
+    query = "SELECT * FROM movies WHERE 1=1"
+    params = []
+
+    if search:
+        query += " AND title LIKE ?"
+        params.append(f"%{search}%")
+    if genre:
+        query += " AND genres LIKE ?"
+        params.append(f"%{genre}%")
+    if actor:
+        query += " AND actors LIKE ?"
+        params.append(f"%{actor}%")
+
+    query += " ORDER BY added_at DESC"
+
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute(query, params)
+        return c.fetchall()
+
+
+def get_all_genres():
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute("SELECT genres FROM movies")
+        genres = set()
+        for row in c.fetchall():
+            if row[0]:
+                for g in row[0].split(","):
+                    genres.add(g.strip())
+        return sorted(genres)
+
+
+def get_all_actors():
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute("SELECT actors FROM movies")
+        actors = set()
+        for row in c.fetchall():
+            if row[0]:
+                for a in row[0].split(","):
+                    actors.add(a.strip())
+        return sorted(actors)
