@@ -1,22 +1,22 @@
-import os
-import sqlite3
-from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from urllib.parse import unquote
-
-load_dotenv()
-MOVIE_PATH = os.getenv("MOVIE_PATH", "/mnt/Movies")
+import sqlite3
+import os
+import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "movies.db")
-POSTER_FALLBACK = os.path.join(BASE_DIR, "static/no-poster.png")
+POSTER_FALLBACK = os.path.join(BASE_DIR, "static", "no-poster.png")
+MOVIE_PATH = os.getenv("MOVIE_PATH", "/mnt/Movies")
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+print(">>> DEBUG: MovieList FastAPI starting up...", file=sys.stdout)
+sys.stdout.flush()
 
 def get_db():
     return sqlite3.connect(DB_PATH)
@@ -26,8 +26,8 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
     conn = get_db()
     cur = conn.cursor()
 
-    per_page = 100
-    offset = (page - 1) * per_page
+    limit = 100
+    offset = (page - 1) * limit
 
     query = "SELECT id, title, folder, poster, genres, actors FROM movies WHERE 1=1"
     params = []
@@ -41,7 +41,7 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
         query += " AND actors LIKE ?"
         params.append(f"%{actor}%")
     query += " ORDER BY added_at DESC LIMIT ? OFFSET ?"
-    params.extend([per_page, offset])
+    params.extend([limit, offset])
 
     cur.execute(query, params)
     movies = cur.fetchall()
@@ -60,13 +60,11 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
         "movies": movies,
         "genres": genre_list,
         "actors": actor_list,
-        "page": page
+        "current_page": page
     })
 
 @app.get("/poster/{movie_id}")
 async def serve_poster(movie_id: int):
-    print(f"[DEBUG] Received request for poster of movie_id: {movie_id}")
-    
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT poster FROM movies WHERE id=?", (movie_id,))
@@ -74,26 +72,15 @@ async def serve_poster(movie_id: int):
     conn.close()
 
     if not row or not row[0]:
-        print(f"[DEBUG] No poster found in DB for movie_id: {movie_id}. Using fallback: {POSTER_FALLBACK}")
-        if os.path.exists(POSTER_FALLBACK):
-            return FileResponse(POSTER_FALLBACK)
-        print(f"[ERROR] Fallback poster does not exist at {POSTER_FALLBACK}")
-        raise HTTPException(status_code=404, detail="Poster not found")
+        print(f"[DEBUG] Poster missing for movie_id={movie_id}, fallback used", file=sys.stdout)
+        sys.stdout.flush()
+        return FileResponse(POSTER_FALLBACK)
 
-    poster_relative = row[0]
-    poster_path = os.path.join(MOVIE_PATH, poster_relative)
-
-    print(f"[DEBUG] DB poster path: {poster_relative}")
-    print(f"[DEBUG] Resolved full path: {poster_path}")
-    print(f"[DEBUG] Checking if file exists at: {poster_path}")
+    poster_path = os.path.join(MOVIE_PATH, row[0])
+    print(f"[DEBUG] Serving poster for movie_id={movie_id}, path={poster_path}", file=sys.stdout)
+    sys.stdout.flush()
 
     if os.path.exists(poster_path):
-        print(f"[DEBUG] Serving poster from: {poster_path}")
         return FileResponse(poster_path)
     else:
-        print(f"[WARN] Poster file not found at {poster_path}, using fallback.")
-        if os.path.exists(POSTER_FALLBACK):
-            return FileResponse(POSTER_FALLBACK)
-        print(f"[ERROR] Fallback poster does not exist at {POSTER_FALLBACK}")
-        raise HTTPException(status_code=404, detail="Poster not found")
-
+        return FileResponse(POSTER_FALLBACK)
