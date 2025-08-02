@@ -29,7 +29,7 @@ def init_db():
 def parse_nfo(nfo_path):
     try:
         with open(nfo_path, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f.read(), "lxml")
+            soup = BeautifulSoup(f.read(), "xml")
             title = soup.find("title").text if soup.find("title") else None
             genres = ", ".join([g.text for g in soup.find_all("genre")])
             actors = ", ".join([a.text for a in soup.find_all("actor")])
