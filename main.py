@@ -30,11 +30,14 @@ async def get_poster(movie_id: int):
         return FileResponse(row[0])
     return FileResponse("templates/no-poster.png")
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request, search: str = None, genre: str = None, actor: str = None):
-    movies = get_movies(search, genre, actor)
-    genres, actors = get_filters()
-    return templates.TemplateResponse("index.html", {"request": request, "movies": movies, "genres": genres, "actors": actors, "selected_genre": genre, "selected_actor": actor})
+@app.get("/")
+def home(request: Request):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT * FROM movies ORDER BY added_at DESC")
+    movies = c.fetchall()
+    conn.close()
+    return templates.TemplateResponse("index.html", {"request": request, "movies": movies})
 
 @app.post("/rescan")
 async def rescan():
