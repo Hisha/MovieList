@@ -24,6 +24,8 @@ def get_db():
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, search: str = None, genre: str = None, actor: str = None, page: int = 1):
     conn = get_db()
+    print(">>> DEBUG: Connected to Database", file=sys.stdout)
+    sys.stdout.flush()
     cur = conn.cursor()
 
     limit = 100
@@ -55,6 +57,8 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
     actor_list = sorted({a.strip() for row in actors_raw for a in (row[0].split(",") if row[0] else []) if a.strip()})
 
     conn.close()
+    print(">>> DEBUG: Done with the database...", file=sys.stdout)
+    sys.stdout.flush()
     return templates.TemplateResponse("index.html", {
         "request": request,
         "movies": movies,
