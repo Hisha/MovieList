@@ -1,14 +1,14 @@
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from urllib.parse import unquote
 import sqlite3
 import os
-from urllib.parse import unquote
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "movies.db")
-POSTER_FALLBACK = "/static/no-poster.png"
+POSTER_FALLBACK = os.path.join(BASE_DIR, "static/no-poster.png")
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -20,10 +20,10 @@ def get_db():
 @app.get("/", response_class=HTMLResponse)
 async def home(
     request: Request,
-    search: str = Query(None),
-    genre: str = Query(None),
-    actor: str = Query(None),
-    page: int = Query(1, ge=1)
+    search: str = None,
+    genre: str = None,
+    actor: str = None,
+    page: int = 1
 ):
     limit = 100
     offset = (page - 1) * limit
@@ -31,7 +31,7 @@ async def home(
     conn = get_db()
     cur = conn.cursor()
 
-    # Build query with filters
+    # Build dynamic query
     query = "SELECT id, title, folder, poster, genres, actors FROM movies WHERE 1=1"
     params = []
     if search:
@@ -49,7 +49,7 @@ async def home(
     cur.execute(query, params)
     movies = cur.fetchall()
 
-    # Total count for pagination
+    # Count for pagination
     count_query = "SELECT COUNT(*) FROM movies WHERE 1=1"
     count_params = []
     if search:
@@ -65,7 +65,7 @@ async def home(
     total_movies = cur.fetchone()[0]
     total_pages = (total_movies // limit) + (1 if total_movies % limit else 0)
 
-    # Fetch genres & actors for dropdowns
+    # Dropdown filters
     cur.execute("SELECT DISTINCT genres FROM movies WHERE genres IS NOT NULL")
     genres_raw = cur.fetchall()
     genre_list = sorted({g.strip() for row in genres_raw for g in (row[0].split(",") if row[0] else []) if g.strip()})
@@ -85,9 +85,19 @@ async def home(
         "total_pages": total_pages
     })
 
-@app.get("/poster/{path:path}")
-async def poster_proxy(path: str):
-    file_path = unquote(path)
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
-    return FileResponse("static/no-poster.png")
+@app.get("/poster/{movie_id}")
+async def serve_poster(movie_id: int):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT folder FROM movies WHERE id=?", (movie_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return FileResponse(POSTER_FALLBACK)
+
+    folder_path = row[0]
+    poster_path = os.path.join(folder_path, "poster.jpg")
+    if os.path.exists(poster_path):
+        return FileResponse(poster_path)
+    return FileResponse(POSTER_FALLBACK)
