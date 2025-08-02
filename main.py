@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 import sqlite3
 import os
 import sys
+from html import escape
 
 # === Config ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -21,9 +22,11 @@ templates = Jinja2Templates(directory="templates")
 print(">>> DEBUG: MovieList FastAPI starting...", file=sys.stdout)
 sys.stdout.flush()
 
+
 # === DB Helper ===
 def get_db():
     return sqlite3.connect(DB_PATH)
+
 
 # === Home Page ===
 @app.get("/", response_class=HTMLResponse)
@@ -70,6 +73,7 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
         "current_page": page
     })
 
+
 # === Load More Route for AJAX ===
 @app.get("/load_more", response_class=HTMLResponse)
 async def load_more(request: Request, page: int = Query(1), search: str = None, genre: str = None, actor: str = None):
@@ -99,17 +103,27 @@ async def load_more(request: Request, page: int = Query(1), search: str = None, 
 
     html_snippet = ""
     for movie in movies:
+        title = escape(movie[1] or "")
+        genres = escape(movie[4] or "N/A")
+        actors = escape(movie[5] or "N/A")
+
         html_snippet += f"""
         <div class="col-6 col-md-3 mb-4">
-            <div class="movie-card" onclick="showDetails('{movie[1]}', '/ML/poster/{movie[0]}', '{movie[4] or 'N/A'}', '{movie[5] or 'N/A'}')">
-                <img src="/ML/poster/{movie[0]}" alt="{movie[1]}">
+            <div class="movie-card"
+                 data-title="{title}"
+                 data-poster="/ML/poster/{movie[0]}"
+                 data-genres="{genres}"
+                 data-actors="{actors}"
+                 onclick="openModal(this)">
+                <img src="/ML/poster/{movie[0]}" alt="{title}">
                 <div class="p-2 text-center">
-                    <h6>{movie[1]}</h6>
+                    <h6>{title}</h6>
                 </div>
             </div>
         </div>
         """
     return HTMLResponse(content=html_snippet)
+
 
 # === Serve Poster Files ===
 @app.get("/poster/{movie_id}")
