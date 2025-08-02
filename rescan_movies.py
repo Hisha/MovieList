@@ -1,53 +1,31 @@
 import os
 import sqlite3
-from datetime import datetime
-from bs4 import BeautifulSoup
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MOVIE_DIR = "/mnt/Movies"
-DB_PATH = os.path.join(BASE_DIR, "movies.db")
+MOVIES_DIR = "/mnt/Movies"
+DB_PATH = "movies.db"
 
-# Create table if not exists
-conn = sqlite3.connect(DB_PATH)
-cur = conn.cursor()
-cur.execute("""
-CREATE TABLE IF NOT EXISTS movies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    folder TEXT,
-    poster TEXT,
-    genres TEXT,
-    actors TEXT,
-    added_at TEXT
-)
-""")
-conn.commit()
+def rescan_movies():
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
 
-def parse_nfo(nfo_path):
-    genres, actors = [], []
-    if os.path.exists(nfo_path):
-        with open(nfo_path, "r", encoding="utf-8", errors="ignore") as f:
-            soup = BeautifulSoup(f.read(), "xml")
-            genres = [g.text for g in soup.find_all("genre")]
-            actors = [a.find("name").text for a in soup.find_all("actor")]
-    return ",".join(genres), ",".join(actors)
+    cur.execute("CREATE TABLE IF NOT EXISTS movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, folder TEXT, poster TEXT, genres TEXT, actors TEXT, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    conn.commit()
 
-existing_folders = {row[0] for row in cur.execute("SELECT folder FROM movies").fetchall()}
+    for folder in os.listdir(MOVIES_DIR):
+        folder_path = os.path.join(MOVIES_DIR, folder)
+        if os.path.isdir(folder_path):
+            title = folder
+            poster = None
+            for file in os.listdir(folder_path):
+                if file.lower() == "poster.jpg" or file.lower() == "poster.png":
+                    poster = f"{folder}/{file}"
+            cur.execute("SELECT id FROM movies WHERE folder=?", (folder,))
+            if not cur.fetchone():
+                cur.execute("INSERT INTO movies (title, folder, poster) VALUES (?, ?, ?)", (title, folder, poster))
+                print(f"Added: {title}")
 
-added = 0
-for folder in sorted(os.listdir(MOVIE_DIR)):
-    full_path = os.path.join(MOVIE_DIR, folder)
-    if not os.path.isdir(full_path) or folder in existing_folders:
-        continue
+    conn.commit()
+    conn.close()
 
-    poster = os.path.join(full_path, "poster.jpg")
-    nfo_file = os.path.join(full_path, "movie.nfo")
-    genres, actors = parse_nfo(nfo_file)
-
-    cur.execute("INSERT INTO movies (title, folder, poster, genres, actors, added_at) VALUES (?, ?, ?, ?, ?, ?)",
-                (folder, full_path, poster if os.path.exists(poster) else None, genres, actors, datetime.now().isoformat()))
-    added += 1
-
-conn.commit()
-conn.close()
-print(f"✅ Rescan complete. {added} new movies added.")
+if __name__ == "__main__":
+    rescan_movies()
