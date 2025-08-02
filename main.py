@@ -1,11 +1,10 @@
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi import FastAPI, Request, HTTPException, Query
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import sqlite3
 import os
 import sys
-from urllib.parse import unquote
 
 # === Config ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,13 +21,11 @@ templates = Jinja2Templates(directory="templates")
 print(">>> DEBUG: MovieList FastAPI starting...", file=sys.stdout)
 sys.stdout.flush()
 
-
 # === DB Helper ===
 def get_db():
     return sqlite3.connect(DB_PATH)
 
-
-# === Home Page (First 100 Movies) ===
+# === Home Page ===
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, search: str = None, genre: str = None, actor: str = None, page: int = 1):
     conn = get_db()
@@ -65,9 +62,6 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
 
     conn.close()
 
-    print(f"[DEBUG] Home loaded: page={page}, movies_returned={len(movies)}", file=sys.stdout)
-    sys.stdout.flush()
-
     return templates.TemplateResponse("index.html", {
         "request": request,
         "movies": movies,
@@ -76,10 +70,9 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
         "current_page": page
     })
 
-
-# === JSON API for Load More (AJAX) ===
-@app.get("/movies")
-async def get_movies(page: int = 1, search: str = None, genre: str = None, actor: str = None):
+# === Load More Route for AJAX ===
+@app.get("/load_more", response_class=HTMLResponse)
+async def load_more(request: Request, page: int = Query(1), search: str = None, genre: str = None, actor: str = None):
     conn = get_db()
     cur = conn.cursor()
 
@@ -104,21 +97,19 @@ async def get_movies(page: int = 1, search: str = None, genre: str = None, actor
     movies = cur.fetchall()
     conn.close()
 
-    print(f"[DEBUG] API /movies: page={page}, count={len(movies)}", file=sys.stdout)
-    sys.stdout.flush()
-
-    data = [
-        {
-            "id": m[0],
-            "title": m[1],
-            "poster": f"/ML/poster/{m[0]}",
-            "genres": m[4] or "",
-            "actors": m[5] or ""
-        }
-        for m in movies
-    ]
-    return JSONResponse({"movies": data})
-
+    html_snippet = ""
+    for movie in movies:
+        html_snippet += f"""
+        <div class="col-6 col-md-3 mb-4">
+            <div class="movie-card" onclick="showDetails('{movie[1]}', '/ML/poster/{movie[0]}', '{movie[4] or 'N/A'}', '{movie[5] or 'N/A'}')">
+                <img src="/ML/poster/{movie[0]}" alt="{movie[1]}">
+                <div class="p-2 text-center">
+                    <h6>{movie[1]}</h6>
+                </div>
+            </div>
+        </div>
+        """
+    return HTMLResponse(content=html_snippet)
 
 # === Serve Poster Files ===
 @app.get("/poster/{movie_id}")
@@ -130,17 +121,10 @@ async def serve_poster(movie_id: int):
     conn.close()
 
     if not row or not row[0]:
-        print(f"[DEBUG] Poster missing for movie_id={movie_id}", file=sys.stdout)
-        sys.stdout.flush()
         return FileResponse(POSTER_FALLBACK)
 
     poster_path = os.path.join(MOVIE_PATH, row[0])
-    print(f"[DEBUG] Serving poster for movie_id={movie_id}, path={poster_path}", file=sys.stdout)
-    sys.stdout.flush()
-
     if os.path.exists(poster_path):
         return FileResponse(poster_path)
     else:
-        print(f"[DEBUG] Poster not found on disk. Fallback used for {movie_id}", file=sys.stdout)
-        sys.stdout.flush()
         return FileResponse(POSTER_FALLBACK)
