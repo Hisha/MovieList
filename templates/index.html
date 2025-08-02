@@ -33,8 +33,6 @@
         </div>
     </form>
 
-    <button class="btn btn-warning mb-3" onclick="rescan()">Rescan Library</button>
-
     <div class="row row-cols-2 row-cols-md-4 g-3">
         {% for movie in movies %}
         <div class="col">
@@ -68,13 +66,6 @@ function showDetails(title, year, plot) {
     document.getElementById('modalTitle').innerText = title + " (" + year + ")";
     document.getElementById('modalBody').innerText = plot || "No plot available.";
     new bootstrap.Modal(document.getElementById('detailsModal')).show();
-}
-
-function rescan() {
-    fetch('/rescan', { method: 'POST' }).then(res => res.json()).then(data => {
-        alert(data.message);
-        location.reload();
-    });
 }
 </script>
 </body>
