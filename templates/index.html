@@ -13,6 +13,7 @@
         .filter-bar { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .filter-bar input, .filter-bar select { background: #2c2c2c; color: #fff; border: none; }
         .filter-bar button { background: #007bff; border: none; }
+        .load-more-btn { margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -53,7 +54,11 @@
         {% for movie in movies %}
         <div class="col-6 col-md-3 mb-4">
             <div class="movie-card"
-                 onclick="showDetails('{{ movie[1] }}', '{{ url_for('serve_poster', movie_id=movie[0]) }}', '{{ movie[4] or 'N/A' }}', '{{ movie[5] or 'N/A' }}')">
+                 data-title="{{ movie[1] }}"
+                 data-poster="{{ url_for('serve_poster', movie_id=movie[0]) }}"
+                 data-genres="{{ movie[4] or 'N/A' }}"
+                 data-actors="{{ movie[5] or 'N/A' }}"
+                 onclick="openModal(this)">
                 <img src="{{ url_for('serve_poster', movie_id=movie[0]) }}" alt="{{ movie[1] }}">
                 <div class="p-2 text-center">
                     <h6>{{ movie[1] }}</h6>
@@ -64,10 +69,8 @@
     </div>
 
     <!-- Load More Button -->
-    <div class="text-center mt-4">
-        {% if movies|length == 100 %}
-        <button id="load-more-btn" class="btn btn-outline-light" data-page="2">Load More</button>
-        {% endif %}
+    <div class="text-center">
+        <button id="load-more" class="btn btn-outline-light load-more-btn" data-page="2">Load More</button>
     </div>
 </div>
 
@@ -90,36 +93,56 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function showDetails(title, poster, genres, actors) {
-    document.getElementById('movieTitle').innerText = title;
-    document.getElementById('moviePoster').src = poster;
-    document.getElementById('movieGenres').innerText = genres;
-    document.getElementById('movieActors').innerText = actors;
+function openModal(el) {
+    document.getElementById('movieTitle').innerText = el.dataset.title;
+    document.getElementById('moviePoster').src = el.dataset.poster;
+    document.getElementById('movieGenres').innerText = el.dataset.genres;
+    document.getElementById('movieActors').innerText = el.dataset.actors;
     new bootstrap.Modal(document.getElementById('movieModal')).show();
 }
 
-document.addEventListener("DOMContentLoaded", function() {
-    const loadMoreBtn = document.getElementById("load-more-btn");
-    const movieGrid = document.getElementById("movie-grid");
+document.getElementById('load-more').addEventListener('click', async function() {
+    const btn = this;
+    const page = btn.getAttribute('data-page');
+    const search = new URLSearchParams(window.location.search).get('search') || '';
+    const genre = new URLSearchParams(window.location.search).get('genre') || '';
+    const actor = new URLSearchParams(window.location.search).get('actor') || '';
 
-    if (loadMoreBtn) {
-        loadMoreBtn.addEventListener("click", async function() {
-            const page = parseInt(this.dataset.page);
-            const params = new URLSearchParams(new FormData(document.querySelector(".filter-bar")));
-            params.append("page", page);
+    const url = `/ML/movies?page=${page}&search=${encodeURIComponent(search)}&genre=${encodeURIComponent(genre)}&actor=${encodeURIComponent(actor)}`;
 
-            const response = await fetch(`/ML/load_more?${params.toString()}`);
-            if (response.ok) {
-                const html = await response.text();
-                if (html.trim()) {
-                    movieGrid.insertAdjacentHTML("beforeend", html);
-                    this.dataset.page = page + 1;
-                } else {
-                    this.style.display = "none"; // No more results
-                }
-            }
-        });
+    btn.disabled = true;
+    btn.textContent = "Loading...";
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.movies.length === 0) {
+        btn.style.display = 'none';
+        return;
     }
+
+    const grid = document.getElementById('movie-grid');
+    data.movies.forEach(movie => {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-3 mb-4';
+        col.innerHTML = `
+            <div class="movie-card"
+                 data-title="${movie.title}"
+                 data-poster="${movie.poster}"
+                 data-genres="${movie.genres}"
+                 data-actors="${movie.actors}"
+                 onclick="openModal(this)">
+                <img src="${movie.poster}" alt="${movie.title}">
+                <div class="p-2 text-center">
+                    <h6>${movie.title}</h6>
+                </div>
+            </div>`;
+        grid.appendChild(col);
+    });
+
+    btn.setAttribute('data-page', parseInt(page) + 1);
+    btn.disabled = false;
+    btn.textContent = "Load More";
 });
 </script>
 </body>
