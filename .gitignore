@@ -1,4 +1,11 @@
-__pycache__/
-*.db
+# Environment
 .env
-.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+ML_env/
+.idea/
+.vscode/
+*.log
