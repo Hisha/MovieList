@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from utils import init_db, get_movies, get_all_genres, get_all_actors
 import uvicorn
 
-app = FastAPI()
+app = FastAPI(root_path="/ML")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
