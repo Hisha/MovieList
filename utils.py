@@ -52,8 +52,9 @@ def scan_movies():
         cur.execute("SELECT id FROM movies WHERE folder=?", (folder_path,))
         if cur.fetchone():
             continue
-        cur.execute("INSERT INTO movies (title, year, folder, poster, genres, actors, plot, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (title, year, folder_path, poster_path if os.path.exists(poster_path) else None, genres, actors, plot, datetime.now().isoformat()))
+        added_on = os.path.getmtime(full_folder_path)  # folder mod time
+        cur.execute("INSERT INTO movies (title, folder, genres, actors, description, added_at) VALUES (?, ?, ?, ?, ?, datetime(?,'unixepoch'))",
+            (title, folder, ",".join(genres), ",".join(actors), plot, int(added_on)))
     conn.commit()
     conn.close()
 
