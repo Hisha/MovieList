@@ -13,7 +13,6 @@
         .filter-bar { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .filter-bar input, .filter-bar select { background: #2c2c2c; color: #fff; border: none; }
         .filter-bar button { background: #007bff; border: none; }
-        #load-more-btn { margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -23,7 +22,7 @@
     </h1>
 
     <!-- Filter Bar -->
-    <form id="filter-form" class="filter-bar row g-2 align-items-center" method="get">
+    <form class="filter-bar row g-2 align-items-center" method="get">
         <div class="col-12 col-md-4">
             <input type="text" name="search" class="form-control" placeholder="Search title"
                    value="{{ request.query_params.get('search', '') }}">
@@ -65,11 +64,11 @@
     </div>
 
     <!-- Load More Button -->
-    {% if movies|length == 100 %}
-    <div class="text-center">
+    <div class="text-center mt-4">
+        {% if movies|length == 100 %}
         <button id="load-more-btn" class="btn btn-outline-light" data-page="2">Load More</button>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
 <!-- Modal -->
@@ -99,20 +98,25 @@ function showDetails(title, poster, genres, actors) {
     new bootstrap.Modal(document.getElementById('movieModal')).show();
 }
 
-// AJAX Load More
 document.addEventListener("DOMContentLoaded", function() {
     const loadMoreBtn = document.getElementById("load-more-btn");
+    const movieGrid = document.getElementById("movie-grid");
+
     if (loadMoreBtn) {
         loadMoreBtn.addEventListener("click", async function() {
             const page = parseInt(this.dataset.page);
-            const params = new URLSearchParams(new FormData(document.getElementById('filter-form')));
+            const params = new URLSearchParams(new FormData(document.querySelector(".filter-bar")));
             params.append("page", page);
-            const response = await fetch(`/load_more?${params.toString()}`);
+
+            const response = await fetch(`/ML/load_more?${params.toString()}`);
             if (response.ok) {
                 const html = await response.text();
-                document.getElementById("movie-grid").insertAdjacentHTML("beforeend", html);
-                this.dataset.page = page + 1;
-                if (html.trim() === "") this.style.display = "none"; // Hide if no more results
+                if (html.trim()) {
+                    movieGrid.insertAdjacentHTML("beforeend", html);
+                    this.dataset.page = page + 1;
+                } else {
+                    this.style.display = "none"; // No more results
+                }
             }
         });
     }
