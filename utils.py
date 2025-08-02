@@ -29,7 +29,7 @@ def parse_nfo(nfo_path):
     """Extract metadata from NFO file using lxml."""
     try:
         with open(nfo_path, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f.read(), "lxml")
+            soup = BeautifulSoup(f.read(), "xml")
             title = soup.find("title").text if soup.find("title") else "Unknown"
             year = soup.find("year").text if soup.find("year") else ""
             plot = soup.find("plot").text if soup.find("plot") else ""
