@@ -69,6 +69,8 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
 
 @app.get("/poster/{movie_id}")
 async def serve_poster(movie_id: int):
+    print(">>> DEBUG: Poster {movie_id} related", file=sys.stdout)
+    sys.stdout.flush()
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT poster FROM movies WHERE id=?", (movie_id,))
