@@ -39,7 +39,7 @@
     <div class="row">
         {% for movie in movies %}
         <div class="col-md-3 mb-4">
-            <div class="movie-card" onclick="showDetails('{{ movie[1] }}', '{{ movie[3] if movie[3] else '/static/no-poster.png' }}', '{{ movie[4] or '' }}', '{{ movie[5] or '' }}')">
+            <div class="movie-card" onclick="showDetails('{{ movie[1] }}', '/posters/{{ movie[3]|urlencode }}', '{{ movie[4] or '' }}', '{{ movie[5] or '' }}')">
                 <img src="/posters/{{ movie[3]|urlencode }}" class="card-img-top" alt="{{ movie[1] }}">
                 <div class="p-2 text-center">
                     <h6>{{ movie[1] }}</h6>
