@@ -1,45 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Movie Library</title>
+    <title>Movie List</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .movie-card img { width: 100%; height: auto; cursor: pointer; }
+    </style>
 </head>
-<body class="bg-dark text-white">
-<div class="container my-4">
-    <h1 class="text-center mb-4">🎬 Movie Library</h1>
-    <form method="get" class="row mb-4">
-        <div class="col-md-4">
-            <input type="text" name="search" class="form-control" placeholder="Search by title...">
-        </div>
-        <div class="col-md-3">
-            <select name="genre" class="form-select">
-                <option value="">All Genres</option>
-                {% for g in genres %}
-                <option value="{{g}}" {% if g == selected_genre %}selected{% endif %}>{{g}}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-3">
-            <select name="actor" class="form-select">
-                <option value="">All Actors</option>
-                {% for a in actors %}
-                <option value="{{a}}" {% if a == selected_actor %}selected{% endif %}>{{a}}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-2 d-flex">
-            <button class="btn btn-primary w-100">Filter</button>
-        </div>
+<body class="bg-dark text-light">
+<div class="container mt-4">
+    <h1 class="mb-4">🎬 My Movies</h1>
+
+    <!-- Filters -->
+    <form class="mb-4 d-flex gap-2">
+        <input type="text" name="search" class="form-control" placeholder="Search by title">
+        <select name="genre" class="form-select">
+            <option value="">All Genres</option>
+            {% for g in genres %}
+            <option value="{{ g }}">{{ g }}</option>
+            {% endfor %}
+        </select>
+        <select name="actor" class="form-select">
+            <option value="">All Actors</option>
+            {% for a in actors %}
+            <option value="{{ a }}">{{ a }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-primary">Filter</button>
     </form>
 
-    <div class="row row-cols-2 row-cols-md-4 g-3">
+    <!-- Movie Grid -->
+    <div class="row">
         {% for movie in movies %}
-        <div class="col">
-            <div class="card bg-secondary" onclick="showDetails('{{movie['title']}}', '{{movie['year']}}', '{{movie['plot']}}')">
-                <img src="/poster/{{movie['id']}}" class="card-img-top" alt="Poster">
+        <div class="col-md-3 mb-4">
+            <div class="card bg-secondary movie-card" onclick="showDetails('{{ movie[1] }}', '{{ movie[3] or '/static/no-poster.png' }}', '{{ movie[4] }}', '{{ movie[5] }}')">
+                <img src="{{ movie[3] if movie[3] else '/static/no-poster.png' }}" alt="{{ movie[1] }}">
                 <div class="card-body">
-                    <h6 class="card-title text-center">{{movie['title']}}</h6>
+                    <h5 class="card-title">{{ movie[1] }}</h5>
                 </div>
             </div>
         </div>
@@ -48,24 +45,30 @@
 </div>
 
 <!-- Modal -->
-<div class="modal fade" id="detailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark text-white">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle"></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modalBody"></div>
-        </div>
+<div class="modal fade" id="movieModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="movieTitle"></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img id="moviePoster" class="img-fluid mb-3" />
+        <p><strong>Genres:</strong> <span id="movieGenres"></span></p>
+        <p><strong>Actors:</strong> <span id="movieActors"></span></p>
+      </div>
     </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function showDetails(title, year, plot) {
-    document.getElementById('modalTitle').innerText = title + " (" + year + ")";
-    document.getElementById('modalBody').innerText = plot || "No plot available.";
-    new bootstrap.Modal(document.getElementById('detailsModal')).show();
+function showDetails(title, poster, genres, actors) {
+    document.getElementById('movieTitle').innerText = title;
+    document.getElementById('moviePoster').src = poster;
+    document.getElementById('movieGenres').innerText = genres || 'N/A';
+    document.getElementById('movieActors').innerText = actors || 'N/A';
+    new bootstrap.Modal(document.getElementById('movieModal')).show();
 }
 </script>
 </body>
