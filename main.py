@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from urllib.parse import unquote
+import logging
 
 load_dotenv()
 MOVIE_PATH = os.getenv("MOVIE_PATH", "/mnt/Movies")
@@ -17,6 +18,9 @@ POSTER_FALLBACK = os.path.join(BASE_DIR, "static/no-poster.png")
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# Configure logging if not already set
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 def get_db():
     return sqlite3.connect(DB_PATH)
@@ -65,6 +69,8 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
 
 @app.get("/poster/{movie_id}")
 async def serve_poster(movie_id: int):
+    logging.info(f"Received request for poster of movie_id: {movie_id}")
+    
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT poster FROM movies WHERE id=?", (movie_id,))
@@ -72,14 +78,25 @@ async def serve_poster(movie_id: int):
     conn.close()
 
     if not row or not row[0]:
+        logging.warning(f"No poster found in DB for movie_id: {movie_id}. Using fallback: {POSTER_FALLBACK}")
         if os.path.exists(POSTER_FALLBACK):
             return FileResponse(POSTER_FALLBACK)
+        logging.error(f"Fallback poster does not exist at {POSTER_FALLBACK}")
         raise HTTPException(status_code=404, detail="Poster not found")
 
-    poster_path = os.path.join(MOVIE_PATH, row[0])
+    poster_relative = row[0]
+    poster_path = os.path.join(MOVIE_PATH, poster_relative)
+
+    logging.info(f"DB poster path: {poster_relative}")
+    logging.info(f"Resolved full path: {poster_path}")
+    logging.info(f"Checking if file exists at: {poster_path}")
+
     if os.path.exists(poster_path):
+        logging.info(f"Serving poster from: {poster_path}")
         return FileResponse(poster_path)
-    elif os.path.exists(POSTER_FALLBACK):
-        return FileResponse(POSTER_FALLBACK)
     else:
+        logging.warning(f"Poster file not found at {poster_path}, using fallback.")
+        if os.path.exists(POSTER_FALLBACK):
+            return FileResponse(POSTER_FALLBACK)
+        logging.error(f"Fallback poster does not exist at {POSTER_FALLBACK}")
         raise HTTPException(status_code=404, detail="Poster not found")
