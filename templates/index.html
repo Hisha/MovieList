@@ -7,10 +7,9 @@
     <style>
         body { background-color: #121212; color: #fff; }
         .movie-card { background: #1f1f1f; border-radius: 8px; overflow: hidden; transition: transform 0.3s; }
-        .movie-card:hover { transform: scale(1.05); cursor: pointer; }
         .movie-card img { width: 100%; height: 350px; object-fit: cover; }
-        .filter-bar { background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        h6 { margin-top: 10px; }
+        .movie-card:hover { transform: scale(1.05); }
+        .filter-bar { background: #222; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -18,7 +17,7 @@
     <h1 class="text-center mb-4">🎬 My Movie Library</h1>
 
     <!-- Filters -->
-    <form class="filter-bar d-flex gap-2">
+    <form class="filter-bar d-flex gap-2" method="get">
         <input type="text" name="search" class="form-control" placeholder="Search title" value="{{ request.query_params.get('search', '') }}">
         <select name="genre" class="form-select">
             <option value="">All Genres</option>
@@ -39,8 +38,8 @@
     <div class="row">
         {% for movie in movies %}
         <div class="col-md-3 mb-4">
-            <div class="movie-card" onclick="showDetails('{{ movie[1] }}', '{{ movie[3] if movie[3] else '/static/no-poster.png' }}', '{{ movie[4] or 'N/A' }}', '{{ movie[5] or 'N/A' }}')">
-                <img src="/posters/{{ movie[3]|urlencode }}" alt="{{ movie[1] }}">
+            <div class="movie-card" onclick="showDetails('{{ movie[1] }}', '/static/{{ movie[3] if movie[3] else 'no-poster.png' }}', '{{ movie[4] or '' }}', '{{ movie[5] or '' }}')">
+                <img src="/static/{{ movie[3] if movie[3] else 'no-poster.png' }}" alt="{{ movie[1] }}">
                 <div class="p-2 text-center">
                     <h6>{{ movie[1] }}</h6>
                 </div>
@@ -60,8 +59,8 @@
       </div>
       <div class="modal-body">
         <img id="moviePoster" class="img-fluid mb-3" style="border-radius:8px;"/>
-        <p><strong>Genres:</strong> <span id="movieGenres" class="text-info"></span></p>
-        <p><strong>Actors:</strong> <span id="movieActors" class="text-warning"></span></p>
+        <p><strong>Genres:</strong> <span id="movieGenres"></span></p>
+        <p><strong>Actors:</strong> <span id="movieActors"></span></p>
       </div>
     </div>
   </div>
