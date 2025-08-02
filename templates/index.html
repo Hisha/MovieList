@@ -1,53 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Movie List</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs" defer></script>
+    <meta charset="UTF-8">
+    <title>Movie Library</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-900 text-white">
-    <div class="container mx-auto p-6">
-        <h1 class="text-3xl font-bold mb-6">My Movie Collection</h1>
-
-        <form method="get" class="flex gap-4 mb-6">
-            <input type="text" name="search" value="{{ search_query or '' }}" placeholder="Search by name" class="px-4 py-2 rounded text-black">
-            <select name="genre" class="px-4 py-2 text-black">
+<body class="bg-dark text-white">
+<div class="container my-4">
+    <h1 class="text-center mb-4">🎬 Movie Library</h1>
+    <form method="get" class="row mb-4">
+        <div class="col-md-4">
+            <input type="text" name="search" class="form-control" placeholder="Search by title...">
+        </div>
+        <div class="col-md-3">
+            <select name="genre" class="form-select">
                 <option value="">All Genres</option>
                 {% for g in genres %}
-                    <option value="{{ g }}" {% if selected_genre == g %}selected{% endif %}>{{ g }}</option>
+                <option value="{{g}}" {% if g == selected_genre %}selected{% endif %}>{{g}}</option>
                 {% endfor %}
             </select>
-            <select name="actor" class="px-4 py-2 text-black">
+        </div>
+        <div class="col-md-3">
+            <select name="actor" class="form-select">
                 <option value="">All Actors</option>
                 {% for a in actors %}
-                    <option value="{{ a }}" {% if selected_actor == a %}selected{% endif %}>{{ a }}</option>
+                <option value="{{a}}" {% if a == selected_actor %}selected{% endif %}>{{a}}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="bg-blue-600 px-4 py-2 rounded">Filter</button>
-        </form>
+        </div>
+        <div class="col-md-2 d-flex">
+            <button class="btn btn-primary w-100">Filter</button>
+        </div>
+    </form>
 
-        <form method="post" action="/rescan" class="mb-6">
-            <button type="submit" class="bg-green-600 px-4 py-2 rounded">Rescan Movies</button>
-        </form>
+    <button class="btn btn-warning mb-3" onclick="rescan()">Rescan Library</button>
 
-        <div class="grid grid-cols-6 gap-4">
-            {% for movie in movies %}
-                <div x-data="{ open: false }">
-                    <img src="/posters/{{ movie[1] }}/poster.jpg" alt="{{ movie[0] }}" class="w-full h-auto cursor-pointer" @click="open = true">
-                    
-                    <!-- Modal -->
-                    <div x-show="open" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center" style="display: none;">
-                        <div class="bg-gray-800 p-6 rounded max-w-lg w-full">
-                            <h2 class="text-2xl font-bold mb-2">{{ movie[0] }}</h2>
-                            <p><strong>Genres:</strong> {{ movie[2] }}</p>
-                            <p><strong>Actors:</strong> {{ movie[3] }}</p>
-                            <p class="mt-2">{{ movie[4] }}</p>
-                            <button @click="open = false" class="mt-4 bg-red-600 px-4 py-2 rounded">Close</button>
-                        </div>
-                    </div>
+    <div class="row row-cols-2 row-cols-md-4 g-3">
+        {% for movie in movies %}
+        <div class="col">
+            <div class="card bg-secondary" onclick="showDetails('{{movie['title']}}', '{{movie['year']}}', '{{movie['plot']}}')">
+                <img src="/poster/{{movie['id']}}" class="card-img-top" alt="Poster">
+                <div class="card-body">
+                    <h6 class="card-title text-center">{{movie['title']}}</h6>
                 </div>
-            {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function showDetails(title, year, plot) {
+    document.getElementById('modalTitle').innerText = title + " (" + year + ")";
+    document.getElementById('modalBody').innerText = plot || "No plot available.";
+    new bootstrap.Modal(document.getElementById('detailsModal')).show();
+}
+
+function rescan() {
+    fetch('/rescan', { method: 'POST' }).then(res => res.json()).then(data => {
+        alert(data.message);
+        location.reload();
+    });
+}
+</script>
 </body>
 </html>
