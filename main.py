@@ -11,7 +11,7 @@ DB_PATH = os.path.join(BASE_DIR, "movies.db")
 POSTER_FALLBACK = os.path.join(BASE_DIR, "static", "no-poster.png")
 MOVIE_PATH = os.getenv("MOVIE_PATH", "/mnt/Movies")
 
-app = FastAPI()
+app = FastAPI(root_path="/ML")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
