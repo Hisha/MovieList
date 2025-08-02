@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Movie List</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+    async function showDetails(id) {
+        const res = await fetch(`/details/${id}`);
+        const data = await res.json();
+        if (data.error) return;
+        document.getElementById("modal-title").innerText = data.title;
+        document.getElementById("modal-body").innerHTML = `
+            <p><b>Year:</b> ${data.year}</p>
+            <p><b>Genres:</b> ${data.genres.join(", ")}</p>
+            <p><b>Actors:</b> ${data.actors.join(", ")}</p>
+        `;
+        document.getElementById("modal").style.display = "block";
+    }
+    function closeModal() {
+        document.getElementById("modal").style.display = "none";
+    }
+    async function rescan() {
+        const res = await fetch('/rescan', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message);
+        location.reload();
+    }
+    </script>
+</head>
+<body>
+    <div class="header">
+        <h1>Movie Collection</h1>
+        <form method="get" action="/">
+            <input type="text" name="search" placeholder="Search by title" value="{{search}}">
+            <select name="genre">
+                <option value="">All Genres</option>
+                {% for g in genres %}
+                <option value="{{g}}" {% if genre == g %}selected{% endif %}>{{g}}</option>
+                {% endfor %}
+            </select>
+            <select name="actor">
+                <option value="">All Actors</option>
+                {% for a in actors %}
+                <option value="{{a}}" {% if actor == a %}selected{% endif %}>{{a}}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Filter</button>
+        </form>
+        <button onclick="rescan()">Rescan</button>
+    </div>
+
+    <div class="grid">
+        {% for movie in movies %}
+        <div class="card" onclick="showDetails({{movie.id}})">
+            <img src="{{movie.poster}}" alt="{{movie.title}}">
+            <p>{{movie.title}}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span onclick="closeModal()" class="close">&times;</span>
+            <h2 id="modal-title"></h2>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+</body>
+</html>
