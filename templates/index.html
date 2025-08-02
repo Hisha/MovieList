@@ -18,29 +18,37 @@
     <h1 class="text-center mb-4">🎬 My Movie Library</h1>
 
     <!-- Filters -->
-    <form class="filter-bar d-flex flex-wrap gap-2">
-        <input type="text" name="search" class="form-control" placeholder="Search title" value="{{ request.query_params.get('search', '') }}">
-        <select name="genre" class="form-select">
-            <option value="">All Genres</option>
-            {% for g in genres %}
-            <option value="{{ g }}" {% if request.query_params.get('genre') == g %}selected{% endif %}>{{ g }}</option>
-            {% endfor %}
-        </select>
-        <select name="actor" class="form-select">
-            <option value="">All Actors</option>
-            {% for a in actors %}
-            <option value="{{ a }}" {% if request.query_params.get('actor') == a %}selected{% endif %}>{{ a }}</option>
-            {% endfor %}
-        </select>
-        <button class="btn btn-primary">Filter</button>
+    <form class="filter-bar row g-2" method="get">
+        <div class="col-md-4">
+            <input type="text" name="search" class="form-control" placeholder="Search title" value="{{ request.query_params.get('search', '') }}">
+        </div>
+        <div class="col-md-3">
+            <select name="genre" class="form-select">
+                <option value="">All Genres</option>
+                {% for g in genres %}
+                <option value="{{ g }}" {% if request.query_params.get('genre') == g %}selected{% endif %}>{{ g }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="actor" class="form-select">
+                <option value="">All Actors</option>
+                {% for a in actors %}
+                <option value="{{ a }}" {% if request.query_params.get('actor') == a %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100">Filter</button>
+        </div>
     </form>
 
     <!-- Movie Grid -->
     <div class="row">
         {% for movie in movies %}
-        <div class="col-md-3 mb-4">
-            <div class="movie-card" onclick="showDetails('{{ movie[1] }}', '/poster/{{ movie[2]|urlencode }}/poster.jpg', '{{ movie[4] or 'N/A' }}', '{{ movie[5] or 'N/A' }}')">
-                <img src="/poster/{{ movie[2]|urlencode }}/poster.jpg" alt="{{ movie[1] }}">
+        <div class="col-6 col-md-3 mb-4">
+            <div class="movie-card" onclick="showDetails('{{ movie[1] }}', '/poster/{{ movie[0] }}', '{{ movie[4] or 'N/A' }}', '{{ movie[5] or 'N/A' }}')">
+                <img src="/poster/{{ movie[0] }}" alt="{{ movie[1] }}">
                 <div class="p-2 text-center">
                     <h6>{{ movie[1] }}</h6>
                 </div>
