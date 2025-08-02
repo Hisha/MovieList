@@ -1,59 +1,84 @@
 import os
+import sqlite3
+import re
 from bs4 import BeautifulSoup
-from models import Movie, Genre, Actor
-from sqlalchemy.orm import Session
-from datetime import datetime
+
+def init_db(db_path):
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS movies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        folder TEXT,
+        genres TEXT,
+        actors TEXT,
+        description TEXT,
+        added_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    conn.commit()
+    conn.close()
 
 def parse_nfo(nfo_path):
-    genres = []
-    actors = []
-    year = ""
-    try:
-        with open(nfo_path, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f.read(), "lxml")
-            year_tag = soup.find("year")
-            if year_tag:
-                year = year_tag.text
+    genres, actors, plot = [], [], ""
+    if os.path.exists(nfo_path):
+        with open(nfo_path, "r", encoding="utf-8", errors="ignore") as f:
+            soup = BeautifulSoup(f.read(), "xml")
             genres = [g.text for g in soup.find_all("genre")]
             actors = [a.text for a in soup.find_all("actor")]
-    except:
-        pass
-    return year, genres, actors
+            plot_tag = soup.find("plot")
+            plot = plot_tag.text if plot_tag else ""
+    return genres, actors, plot
 
-def scan_movies(base_path, db: Session):
-    added_count = 0
-    for root, dirs, files in os.walk(base_path):
-        if any(f.endswith(".mp4") for f in files):
-            title = os.path.basename(root)
-            movie = db.query(Movie).filter(Movie.title == title).first()
-            if not movie:
-                movie = Movie(title=title, file_path=root, date_added=datetime.utcnow())
-            poster = [f for f in files if f.lower() == "poster.jpg"]
-            if poster:
-                movie.poster = os.path.join(root, poster[0])
-            nfo_file = [f for f in files if f.endswith(".nfo")]
-            if nfo_file:
-                year, genres, actors = parse_nfo(os.path.join(root, nfo_file[0]))
-                movie.year = year
-                movie.genres = [get_or_create_genre(db, g) for g in genres]
-                movie.actors = [get_or_create_actor(db, a) for a in actors]
-            db.add(movie)
-            added_count += 1
-    db.commit()
-    return added_count
+def scan_movies(movie_path, db_path):
+    init_db(db_path)
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM movies")  # Clear old data
 
-def get_or_create_genre(db: Session, name: str):
-    genre = db.query(Genre).filter(Genre.name == name).first()
-    if not genre:
-        genre = Genre(name=name)
-        db.add(genre)
-        db.commit()
-    return genre
+    for folder in sorted(os.listdir(movie_path)):
+        folder_path = os.path.join(movie_path, folder)
+        if not os.path.isdir(folder_path):
+            continue
+        title = re.sub(r"\s*\(\d{4}\)", "", folder)  # Remove year from title
+        nfo_file = os.path.join(folder_path, "movie.nfo")
+        genres, actors, description = parse_nfo(nfo_file)
+        cur.execute("INSERT INTO movies (title, folder, genres, actors, description) VALUES (?, ?, ?, ?, ?)",
+                    (title, folder, ",".join(genres), ",".join(actors), description))
+    conn.commit()
+    conn.close()
 
-def get_or_create_actor(db: Session, name: str):
-    actor = db.query(Actor).filter(Actor.name == name).first()
-    if not actor:
-        actor = Actor(name=name)
-        db.add(actor)
-        db.commit()
-    return actor
+def get_movies(db_path, genre=None, actor=None, search=None):
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    query = "SELECT title, folder, genres, actors, description FROM movies WHERE 1=1"
+    params = []
+    if genre:
+        query += " AND genres LIKE ?"
+        params.append(f"%{genre}%")
+    if actor:
+        query += " AND actors LIKE ?"
+        params.append(f"%{actor}%")
+    if search:
+        query += " AND title LIKE ?"
+        params.append(f"%{search}%")
+    query += " ORDER BY added_on DESC"
+    cur.execute(query, params)
+    movies = cur.fetchall()
+    conn.close()
+    return movies
+
+def get_filters(db_path):
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT genres FROM movies")
+    all_genres = set()
+    for row in cur.fetchall():
+        all_genres.update(row[0].split(","))
+    cur.execute("SELECT DISTINCT actors FROM movies")
+    all_actors = set()
+    for row in cur.fetchall():
+        all_actors.update(row[0].split(","))
+    conn.close()
+    return sorted(filter(None, all_genres)), sorted(filter(None, all_actors))
