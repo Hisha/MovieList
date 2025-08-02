@@ -1,14 +1,29 @@
 import os
 import sqlite3
 import time
+import logging
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
-# Load environment variables
+# -------------------------
+# Logging Configuration
+# -------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+
+# -------------------------
+# Load ENV and Setup Paths
+# -------------------------
 load_dotenv()
 MOVIE_PATH = os.getenv("MOVIE_PATH", "/mnt/Movies")
 DB_PATH = "movies.db"
 
+# -------------------------
+# Initialize Database
+# -------------------------
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
@@ -25,12 +40,15 @@ def init_db():
     conn.commit()
     conn.close()
 
+# -------------------------
+# Parse NFO File
+# -------------------------
 def parse_nfo(nfo_path):
     genres = []
     actors = []
     try:
         with open(nfo_path, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f.read(), "xml")  # Use XML parsing for NFO
+            soup = BeautifulSoup(f.read(), "xml")  # Use XML parser
             for genre_tag in soup.find_all("genre"):
                 genres.append(genre_tag.get_text(strip=True))
             for actor_tag in soup.find_all("actor"):
@@ -38,19 +56,31 @@ def parse_nfo(nfo_path):
                 if name_tag:
                     actors.append(name_tag.get_text(strip=True))
     except Exception as e:
-        print(f"Failed to parse NFO {nfo_path}: {e}")
+        logging.error(f"Failed to parse NFO {nfo_path}: {e}")
     return ",".join(genres), ",".join(actors)
 
+# -------------------------
+# Main Rescan Logic
+# -------------------------
 def rescan_movies():
+    logging.info(f"Starting rescan of movies in {MOVIE_PATH}")
     init_db()
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
+
+    # Get current movies in DB
+    cur.execute("SELECT folder FROM movies")
+    existing_movies = {row[0] for row in cur.fetchall()}
+
+    # Track folders found in filesystem
+    found_folders = set()
 
     for folder in os.listdir(MOVIE_PATH):
         folder_path = os.path.join(MOVIE_PATH, folder)
         if not os.path.isdir(folder_path):
             continue
 
+        found_folders.add(folder)
         title = folder
         poster_path = None
         nfo_path = None
@@ -69,20 +99,29 @@ def rescan_movies():
         # Last modified timestamp for folder
         added_at = int(os.path.getmtime(folder_path))
 
-        # Check if movie exists
-        cur.execute("SELECT id FROM movies WHERE folder=?", (folder,))
-        if cur.fetchone():
-            continue
+        # Insert only if not in DB
+        if folder not in existing_movies:
+            cur.execute("""
+                INSERT INTO movies (title, folder, poster, genres, actors, added_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                title,
+                folder,
+                poster_path,
+                genres,
+                actors,
+                time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(added_at))
+            ))
+            logging.info(f"Added new movie: {title}")
 
-        # Insert new movie
-        cur.execute("""
-            INSERT INTO movies (title, folder, poster, genres, actors, added_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (title, folder, poster_path, genres, actors, time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(added_at))))
-        print(f"Added: {title}")
+    # Remove DB entries for folders that no longer exist
+    for old_folder in existing_movies - found_folders:
+        cur.execute("DELETE FROM movies WHERE folder=?", (old_folder,))
+        logging.info(f"Removed missing movie: {old_folder}")
 
     conn.commit()
     conn.close()
+    logging.info("Rescan completed.")
 
 if __name__ == "__main__":
     rescan_movies()
