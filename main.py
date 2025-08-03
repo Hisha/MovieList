@@ -31,7 +31,8 @@ SORT_MAP = {
     "newest": "added_at DESC",
     "oldest": "added_at ASC",
     "az": "title ASC",
-    "za": "title DESC"
+    "za": "title DESC",
+    "random": "RANDOM()"
 }
 
 # === Home Page ===
