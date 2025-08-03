@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, HTTPException, Query
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import sqlite3
@@ -22,22 +22,29 @@ templates = Jinja2Templates(directory="templates")
 print(">>> DEBUG: MovieList FastAPI starting...", file=sys.stdout)
 sys.stdout.flush()
 
-
 # === DB Helper ===
 def get_db():
     return sqlite3.connect(DB_PATH)
 
+# === Sort Mapping ===
+SORT_MAP = {
+    "newest": "added_at DESC",
+    "oldest": "added_at ASC",
+    "az": "title ASC",
+    "za": "title DESC"
+}
 
 # === Home Page ===
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request, search: str = None, genre: str = None, actor: str = None, page: int = 1):
+async def home(request: Request, search: str = None, genre: str = None, actor: str = None, sort: str = "newest", page: int = 1):
     conn = get_db()
     cur = conn.cursor()
 
     limit = 100
     offset = (page - 1) * limit
+    sort_order = SORT_MAP.get(sort, "added_at DESC")
 
-    query = "SELECT id, title, folder, poster, genres, actors FROM movies WHERE 1=1"
+    query = f"SELECT id, title, folder, poster, genres, actors FROM movies WHERE 1=1"
     params = []
     if search:
         query += " AND title LIKE ?"
@@ -48,7 +55,7 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
     if actor:
         query += " AND actors LIKE ?"
         params.append(f"%{actor}%")
-    query += " ORDER BY added_at DESC LIMIT ? OFFSET ?"
+    query += f" ORDER BY {sort_order} LIMIT ? OFFSET ?"
     params.extend([limit, offset])
 
     cur.execute(query, params)
@@ -70,20 +77,21 @@ async def home(request: Request, search: str = None, genre: str = None, actor: s
         "movies": movies,
         "genres": genre_list,
         "actors": actor_list,
-        "current_page": page
+        "current_page": page,
+        "sort": sort
     })
 
-
-# === Load More Route for AJAX ===
-@app.get("/load_more", response_class=HTMLResponse)
-async def load_more(request: Request, page: int = Query(1), search: str = None, genre: str = None, actor: str = None):
+# === API for AJAX Pagination ===
+@app.get("/movies")
+async def get_movies(page: int = 1, search: str = None, genre: str = None, actor: str = None, sort: str = "newest"):
     conn = get_db()
     cur = conn.cursor()
 
     limit = 100
     offset = (page - 1) * limit
+    sort_order = SORT_MAP.get(sort, "added_at DESC")
 
-    query = "SELECT id, title, folder, poster, genres, actors FROM movies WHERE 1=1"
+    query = f"SELECT id, title, folder, poster, genres, actors FROM movies WHERE 1=1"
     params = []
     if search:
         query += " AND title LIKE ?"
@@ -94,36 +102,24 @@ async def load_more(request: Request, page: int = Query(1), search: str = None, 
     if actor:
         query += " AND actors LIKE ?"
         params.append(f"%{actor}%")
-    query += " ORDER BY added_at DESC LIMIT ? OFFSET ?"
+    query += f" ORDER BY {sort_order} LIMIT ? OFFSET ?"
     params.extend([limit, offset])
 
     cur.execute(query, params)
     movies = cur.fetchall()
     conn.close()
 
-    html_snippet = ""
-    for movie in movies:
-        title = escape(movie[1] or "")
-        genres = escape(movie[4] or "N/A")
-        actors = escape(movie[5] or "N/A")
-
-        html_snippet += f"""
-        <div class="col-6 col-md-3 mb-4">
-            <div class="movie-card"
-                 data-title="{title}"
-                 data-poster="/ML/poster/{movie[0]}"
-                 data-genres="{genres}"
-                 data-actors="{actors}"
-                 onclick="openModal(this)">
-                <img src="/ML/poster/{movie[0]}" alt="{title}">
-                <div class="p-2 text-center">
-                    <h6>{title}</h6>
-                </div>
-            </div>
-        </div>
-        """
-    return HTMLResponse(content=html_snippet)
-
+    data = [
+        {
+            "id": m[0],
+            "title": escape(m[1] or ""),
+            "poster": f"/ML/poster/{m[0]}",
+            "genres": escape(m[4] or "N/A"),
+            "actors": escape(m[5] or "N/A")
+        }
+        for m in movies
+    ]
+    return JSONResponse({"movies": data})
 
 # === Serve Poster Files ===
 @app.get("/poster/{movie_id}")
