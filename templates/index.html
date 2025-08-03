@@ -10,10 +10,10 @@
         .movie-card { background: #1e1e1e; border-radius: 8px; overflow: hidden; transition: transform .3s; }
         .movie-card:hover { transform: scale(1.05); cursor: pointer; }
         .movie-card img { width: 100%; height: 320px; object-fit: cover; }
-        .filter-bar, .sort-bar { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .filter-bar input, .filter-bar select, .sort-bar select { background: #2c2c2c; color: #fff; border: none; }
+        .filter-bar { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .filter-bar input, .filter-bar select { background: #2c2c2c; color: #fff; border: none; }
         .filter-bar button { background: #007bff; border: none; }
-        .load-more-btn { margin-top: 20px; }
+        .sort-bar { margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -49,15 +49,14 @@
         </div>
     </form>
 
-    <!-- Sort Bar -->
-    <div class="sort-bar mb-3" align="right">
-        <label class="form-label">Sort By:</label>
-        <select id="sort-select" class="form-select w-auto d-inline-block">
-            <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest to Oldest</option>
-            <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest to Newest</option>
-            <option value="az" {% if sort == 'az' %}selected{% endif %}>Title A-Z</option>
-            <option value="za" {% if sort == 'za' %}selected{% endif %}>Title Z-A</option>
-            <option value="random" {% if sort == 'random' %}selected{% endif %}>Random</option>
+    <!-- Sort Dropdown -->
+    <div class="sort-bar text-end">
+        <select id="sort" class="form-select w-auto d-inline-block">
+            <option value="newest" {% if request.query_params.get('sort') == 'newest' %}selected{% endif %}>Newest to Oldest</option>
+            <option value="oldest" {% if request.query_params.get('sort') == 'oldest' %}selected{% endif %}>Oldest to Newest</option>
+            <option value="az" {% if request.query_params.get('sort') == 'az' %}selected{% endif %}>A - Z</option>
+            <option value="za" {% if request.query_params.get('sort') == 'za' %}selected{% endif %}>Z - A</option>
+            <option value="random" {% if request.query_params.get('sort') == 'random' %}selected{% endif %}>Random</option>
         </select>
     </div>
 
@@ -78,11 +77,6 @@
             </div>
         </div>
         {% endfor %}
-    </div>
-
-    <!-- Load More Button -->
-    <div class="text-center">
-        <button id="load-more" class="btn btn-outline-light load-more-btn" data-page="2">Load More</button>
     </div>
 </div>
 
@@ -113,31 +107,34 @@ function openModal(el) {
     new bootstrap.Modal(document.getElementById('movieModal')).show();
 }
 
-document.getElementById('sort-select').addEventListener('change', function() {
+// Handle sort change
+document.getElementById('sort').addEventListener('change', function () {
     const params = new URLSearchParams(window.location.search);
     params.set('sort', this.value);
     window.location.search = params.toString();
 });
 
-document.getElementById('load-more').addEventListener('click', async function() {
-    const btn = this;
-    const page = btn.getAttribute('data-page');
+// Infinite Scroll
+let currentPage = 2;
+let isLoading = false;
+
+async function loadMoreMovies() {
+    if (isLoading) return;
+    isLoading = true;
+
     const params = new URLSearchParams(window.location.search);
     const search = params.get('search') || '';
     const genre = params.get('genre') || '';
     const actor = params.get('actor') || '';
     const sort = params.get('sort') || 'newest';
 
-    const url = `/ML/movies?page=${page}&search=${encodeURIComponent(search)}&genre=${encodeURIComponent(genre)}&actor=${encodeURIComponent(actor)}&sort=${encodeURIComponent(sort)}`;
-
-    btn.disabled = true;
-    btn.textContent = "Loading...";
+    const url = `/ML/movies?page=${currentPage}&search=${encodeURIComponent(search)}&genre=${encodeURIComponent(genre)}&actor=${encodeURIComponent(actor)}&sort=${encodeURIComponent(sort)}`;
 
     const response = await fetch(url);
     const data = await response.json();
 
     if (data.movies.length === 0) {
-        btn.style.display = 'none';
+        window.removeEventListener('scroll', onScrollLoad);
         return;
     }
 
@@ -160,10 +157,17 @@ document.getElementById('load-more').addEventListener('click', async function() 
         grid.appendChild(col);
     });
 
-    btn.setAttribute('data-page', parseInt(page) + 1);
-    btn.disabled = false;
-    btn.textContent = "Load More";
-});
+    currentPage++;
+    isLoading = false;
+}
+
+function onScrollLoad() {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
+        loadMoreMovies();
+    }
+}
+
+window.addEventListener('scroll', onScrollLoad);
 </script>
 </body>
 </html>
