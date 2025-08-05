@@ -19,7 +19,7 @@ logging.basicConfig(
 # -------------------------
 load_dotenv()
 MOVIE_PATH = os.getenv("MOVIE_PATH", "/mnt/Movies")
-DB_PATH = "movies.db"
+DB_PATH = os.path.join(os.path.dirname(__file__), "movies.db")
 
 # -------------------------
 # Initialize Database
@@ -64,13 +64,14 @@ def parse_nfo(nfo_path):
 # -------------------------
 def rescan_movies():
     logging.info(f"Starting rescan of movies in {MOVIE_PATH}")
+    logging.info(f"Using database: {DB_PATH}")
     init_db()
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
     # Get current movies in DB
     cur.execute("SELECT folder FROM movies")
-    existing_movies = {row[0] for row in cur.fetchall()}
+    existing_movies = {row[0].lower() for row in cur.fetchall()}
 
     # Track folders found in filesystem
     found_folders = set()
@@ -92,31 +93,28 @@ def rescan_movies():
             if file.lower().endswith(".nfo"):
                 nfo_path = os.path.join(folder_path, file)
 
-        genres, actors = ("", "")
+        genres, actors = "", ""
         if nfo_path:
             genres, actors = parse_nfo(nfo_path)
 
         # Last modified timestamp for folder
-        added_at = int(os.path.getmtime(folder_path))
+        added_at = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(folder_path)))
 
-        # Insert only if not in DB
-        if folder not in existing_movies:
+        if folder.lower() not in existing_movies:
             cur.execute("""
                 INSERT INTO movies (title, folder, poster, genres, actors, added_at)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                title,
-                folder,
-                poster_path,
-                genres,
-                actors,
-                time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(added_at))
-            ))
+            """, (title, folder, poster_path, genres, actors, added_at))
             logging.info(f"Added new movie: {title}")
+        else:
+            # Optional: Update poster/metadata if changed
+            cur.execute("""
+                UPDATE movies SET poster=?, genres=?, actors=? WHERE folder=?
+            """, (poster_path, genres, actors, folder))
 
     # Remove DB entries for folders that no longer exist
-    for old_folder in existing_movies - found_folders:
-        cur.execute("DELETE FROM movies WHERE folder=?", (old_folder,))
+    for old_folder in existing_movies - {f.lower() for f in found_folders}:
+        cur.execute("DELETE FROM movies WHERE lower(folder)=?", (old_folder,))
         logging.info(f"Removed missing movie: {old_folder}")
 
     conn.commit()
