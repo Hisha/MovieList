@@ -26,6 +26,8 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "movies.db")
 # -------------------------
 def init_db():
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
     conn.execute("""
     CREATE TABLE IF NOT EXISTS movies (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +50,7 @@ def parse_nfo(nfo_path):
     actors = []
     try:
         with open(nfo_path, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f.read(), "xml")  # Use XML parser
+            soup = BeautifulSoup(f.read(), "xml")
             for genre_tag in soup.find_all("genre"):
                 genres.append(genre_tag.get_text(strip=True))
             for actor_tag in soup.find_all("actor"):
@@ -67,6 +69,11 @@ def rescan_movies():
     logging.info(f"Using database: {DB_PATH}")
     init_db()
     conn = sqlite3.connect(DB_PATH)
+
+    # Set WAL again in case DB was already created
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+
     cur = conn.cursor()
 
     # Get current movies in DB
@@ -86,10 +93,9 @@ def rescan_movies():
         poster_path = None
         nfo_path = None
 
-        # Look for poster.jpg and .nfo file
         for file in os.listdir(folder_path):
             if file.lower() == "poster.jpg":
-                poster_path = os.path.join(folder, file)  # relative path
+                poster_path = os.path.join(folder, file)
             if file.lower().endswith(".nfo"):
                 nfo_path = os.path.join(folder_path, file)
 
@@ -97,7 +103,6 @@ def rescan_movies():
         if nfo_path:
             genres, actors = parse_nfo(nfo_path)
 
-        # Last modified timestamp for folder
         added_at = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(folder_path)))
 
         if folder.lower() not in existing_movies:
@@ -107,12 +112,11 @@ def rescan_movies():
             """, (title, folder, poster_path, genres, actors, added_at))
             logging.info(f"Added new movie: {title}")
         else:
-            # Optional: Update poster/metadata if changed
             cur.execute("""
                 UPDATE movies SET poster=?, genres=?, actors=? WHERE folder=?
             """, (poster_path, genres, actors, folder))
 
-    # Remove DB entries for folders that no longer exist
+    # Remove entries for missing folders
     for old_folder in existing_movies - {f.lower() for f in found_folders}:
         cur.execute("DELETE FROM movies WHERE lower(folder)=?", (old_folder,))
         logging.info(f"Removed missing movie: {old_folder}")
