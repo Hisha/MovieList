@@ -9,3 +9,7 @@ ML_env/
 .idea/
 .vscode/
 *.log
+
+# Local artwork cache
+artwork_cache/
+.pytest_cache/
