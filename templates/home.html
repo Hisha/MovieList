@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}MovieList — Home{% endblock %}
+{% block content %}
+
+<div class="row text-center g-2 mb-4" id="stats">
+  <div class="col-4">
+    <div class="stat-card">
+      <div class="stat-number">{{ stats.movies }}</div>
+      <div class="stat-label">Movies</div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="stat-card">
+      <div class="stat-number">{{ stats.shows }}</div>
+      <div class="stat-label">TV Shows</div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="stat-card">
+      <div class="stat-number">{{ stats.episodes }}</div>
+      <div class="stat-label">Episodes</div>
+    </div>
+  </div>
+</div>
+
+<form class="home-search mb-4" action="{{ root }}/search" method="get">
+  <div class="input-group input-group-lg">
+    <input type="search" class="form-control" name="q" placeholder="Search the collection…"
+           aria-label="Search the collection">
+    <button class="btn btn-primary" type="submit">Search</button>
+  </div>
+</form>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Recently Added Movies</h4>
+  <a href="{{ root }}/movies?sort=newest" class="small">View all movies</a>
+</div>
+<div class="row">
+  {% for m in recent_movies %}
+    {% with item=m, kind='movie' %}{% include "_card.html" %}{% endwith %}
+  {% else %}
+    <p class="text-secondary">No movies found.</p>
+  {% endfor %}
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 mt-2">
+  <h4 class="mb-0">Recently Updated TV Shows</h4>
+  <a href="{{ root }}/shows?sort=newest" class="small">View all shows</a>
+</div>
+<div class="row">
+  {% for s in recent_shows %}
+    {% with item=s, kind='show' %}{% include "_card.html" %}{% endwith %}
+  {% else %}
+    <p class="text-secondary">No TV shows found.</p>
+  {% endfor %}
+</div>
+
+{% endblock %}

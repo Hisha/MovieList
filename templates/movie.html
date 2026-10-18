@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ movie.title }} — MovieList{% endblock %}
+{% block content %}
+
+<a href="{{ root }}/movies" class="small text-secondary">&larr; Back to movies</a>
+
+<div class="detail-hero mt-2 mb-4">
+  {% if has_fanart %}
+  <img class="detail-fanart" src="{{ root }}/art/movie/{{ movie.id }}/fanart" alt="" loading="lazy">
+  {% endif %}
+  <div class="detail-hero-body row g-4">
+    <div class="col-5 col-md-3 col-lg-2">
+      <img class="detail-poster img-fluid" src="{{ root }}/art/movie/{{ movie.id }}/poster"
+           alt="Poster for {{ movie.title }}">
+    </div>
+    <div class="col-7 col-md-9 col-lg-10">
+      <h2 class="mb-1">{{ movie.title }}</h2>
+      {% if movie.originaltitle and movie.originaltitle != movie.title %}
+      <div class="text-secondary">Originally: {{ movie.originaltitle }}</div>
+      {% endif %}
+      <div class="mb-2 meta-line">
+        {% if movie.year %}<span>{{ movie.year }}</span>{% endif %}
+        {% if movie.premiered and not movie.year %}<span>{{ movie.premiered }}</span>{% endif %}
+        {% if movie.runtime %} &middot; <span>{{ movie.runtime }} min</span>{% endif %}
+        {% if movie.mpaa %} &middot; <span class="badge bg-secondary">{{ movie.mpaa }}</span>{% endif %}
+        {% if movie.rating %} &middot; <span class="rating">★ {{ '%.1f'|format(movie.rating) }}</span>
+          {% if movie.votes %}<span class="text-secondary">({{ movie.votes }} votes)</span>{% endif %}
+        {% endif %}
+        {% if movie.uniqueid and movie.uniqueid_type %}
+          &middot; <span class="text-secondary">{{ movie.uniqueid_type|upper }}: {{ movie.uniqueid }}</span>
+        {% endif %}
+      </div>
+      {% if movie.tagline %}<p class="fst-italic mb-2">{{ movie.tagline }}</p>{% endif %}
+      {% if movie.genres %}<p class="mb-1"><strong>Genres:</strong> <span class="text-info">{{ movie.genres }}</span></p>{% endif %}
+      {% if movie.directors %}<p class="mb-1"><strong>Director{{ 's' if ', ' in movie.directors }}:</strong> {{ movie.directors }}</p>{% endif %}
+      {% if movie.studios %}<p class="mb-1"><strong>Studio{{ 's' if ', ' in movie.studios }}:</strong> {{ movie.studios }}</p>{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if movie.plot %}
+<h5>Plot</h5>
+<p class="plot-text">{{ movie.plot }}</p>
+{% elif movie.plotoutline %}
+<h5>Plot</h5>
+<p class="plot-text">{{ movie.plotoutline }}</p>
+{% else %}
+<p class="text-secondary">No plot description available.</p>
+{% endif %}
+
+{% endblock %}

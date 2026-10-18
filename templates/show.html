@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ show.title }} — MovieList{% endblock %}
+{% block content %}
+
+<a href="{{ root }}/shows" class="small text-secondary">&larr; Back to TV shows</a>
+
+<div class="detail-hero mt-2 mb-4">
+  {% if has_fanart %}
+  <img class="detail-fanart" src="{{ root }}/art/tvshow/{{ show.id }}/fanart" alt="" loading="lazy">
+  {% endif %}
+  <div class="detail-hero-body row g-4">
+    <div class="col-5 col-md-3 col-lg-2">
+      <img class="detail-poster img-fluid" src="{{ root }}/art/tvshow/{{ show.id }}/poster"
+           alt="Poster for {{ show.title }}">
+    </div>
+    <div class="col-7 col-md-9 col-lg-10">
+      <h2 class="mb-1">{{ show.title }}</h2>
+      <div class="mb-2 meta-line">
+        {% if show.year %}<span>{{ show.year }}</span>{% endif %}
+        {% if show.mpaa %} &middot; <span class="badge bg-secondary">{{ show.mpaa }}</span>{% endif %}
+        {% if show.rating %} &middot; <span class="rating">★ {{ '%.1f'|format(show.rating) }}</span>
+          {% if show.votes %}<span class="text-secondary">({{ show.votes }} votes)</span>{% endif %}
+        {% endif %}
+        &middot; <span>{{ show.season_count }} season{{ 's' if show.season_count != 1 }}</span>
+        &middot; <span>{{ show.episode_count }} episode{{ 's' if show.episode_count != 1 }}</span>
+        {% if show.status %} &middot; <span class="text-secondary">{{ show.status }}</span>{% endif %}
+        {% if show.uniqueid and show.uniqueid_type %}
+          &middot; <span class="text-secondary">{{ show.uniqueid_type|upper }}: {{ show.uniqueid }}</span>
+        {% endif %}
+      </div>
+      {% if show.genres %}<p class="mb-1"><strong>Genres:</strong> <span class="text-info">{{ show.genres }}</span></p>{% endif %}
+      {% if show.studios %}<p class="mb-1"><strong>Network{{ 's' if ', ' in show.studios }}:</strong> {{ show.studios }}</p>{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if show.plot %}
+<h5>Plot</h5>
+<p class="plot-text mb-4">{{ show.plot }}</p>
+{% endif %}
+
+{% if seasons %}
+<h5>Episodes</h5>
+<div class="season-pills mb-3" id="season-pills"
+     data-show-id="{{ show.id }}" data-api-base="{{ root }}/api/shows/{{ show.id }}/seasons">
+  {% for s in seasons %}
+  <button type="button" class="btn btn-sm season-pill {% if active_season and s.id == active_season.id %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+          data-season="{{ s.number }}">{{ s.name }}
+    <span class="season-count">{{ s.episode_count }}</span>
+  </button>
+  {% endfor %}
+</div>
+
+<div id="episode-list" data-root="{{ root }}">
+  {% include "_episodes.html" %}
+</div>
+{% else %}
+<p class="text-secondary">No seasons are cataloged for this show yet.</p>
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>MovieList.initSeasons();</script>
+{% endblock %}

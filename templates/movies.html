@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Movies — MovieList{% endblock %}
+{% block content %}
+
+<h3 class="mb-3">Movies <span class="text-secondary fs-6">({{ result.total }})</span></h3>
+
+<form class="filter-bar row g-2 align-items-center mb-3" method="get" action="{{ root }}/movies">
+  <div class="col-12 col-md-4">
+    <input type="search" name="q" class="form-control" placeholder="Search title, actor, or genre" value="{{ q }}">
+  </div>
+  <div class="col-6 col-md-3">
+    <select name="genre" class="form-select">
+      <option value="">All Genres</option>
+      {% for g in genres %}
+      <option value="{{ g }}" {% if genre == g %}selected{% endif %}>{{ g }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-3">
+    <select name="sort" class="form-select">
+      <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Recently Added</option>
+      <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest Added</option>
+      <option value="az" {% if sort == 'az' %}selected{% endif %}>Title A–Z</option>
+      <option value="za" {% if sort == 'za' %}selected{% endif %}>Title Z–A</option>
+      <option value="year" {% if sort == 'year' %}selected{% endif %}>Release Year</option>
+      <option value="rating" {% if sort == 'rating' %}selected{% endif %}>Rating</option>
+    </select>
+  </div>
+  <div class="col-12 col-md-2">
+    <button class="btn btn-primary w-100" type="submit">Apply</button>
+  </div>
+</form>
+
+<div class="row" id="media-grid"
+     data-api="{{ root }}/api/movies"
+     data-q="{{ q }}" data-genre="{{ genre }}" data-sort="{{ sort }}"
+     data-kind="movie" data-next-page="{{ result.page + 1 if result.has_next else '' }}">
+  {% for m in result.items %}
+    {% with item=m, kind='movie' %}{% include "_card.html" %}{% endwith %}
+  {% else %}
+    <p class="text-secondary">No movies match your search.</p>
+  {% endfor %}
+</div>
+<div id="scroll-sentinel" class="text-secondary text-center py-3" aria-hidden="true"></div>
+
+{% endblock %}
+{% block scripts %}
+<script>MovieList.initGrid();</script>
+{% endblock %}

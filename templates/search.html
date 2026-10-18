@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{% if q %}Search: {{ q }}{% else %}Search{% endif %} — MovieList{% endblock %}
+{% block content %}
+
+<h3 class="mb-3">{% if q %}Search results for “{{ q }}”{% else %}Search{% endif %}</h3>
+
+{% if q %}
+  {% if not results.movies and not results.shows %}
+  <p class="text-secondary">Nothing matched your search.</p>
+  {% endif %}
+
+  {% if results.movies %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Movies</h5>
+    <a class="small" href="{{ root }}/movies?q={{ q|urlencode }}">See all movies</a>
+  </div>
+  <div class="row mb-4">
+    {% for m in results.movies %}
+      {% with item=m, kind='movie' %}{% include "_card.html" %}{% endwith %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results.shows %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">TV Shows</h5>
+    <a class="small" href="{{ root }}/shows?q={{ q|urlencode }}">See all shows</a>
+  </div>
+  <div class="row mb-4">
+    {% for s in results.shows %}
+      {% with item=s, kind='show' %}{% include "_card.html" %}{% endwith %}
+    {% endfor %}
+  </div>
+  {% endif %}
+{% else %}
+<p class="text-secondary">Type a query in the search box above to find movies and TV shows
+by title, actor, or genre.</p>
+{% endif %}
+
+{% endblock %}

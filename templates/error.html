@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — MovieList{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <h2>{{ title }}</h2>
+  <p class="text-secondary">{{ message }}</p>
+  <a class="btn btn-primary" href="{{ root }}/">Back to home</a>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{# Expects: item (movie or show dict), kind ("movie"|"show"), root #}
+{% set detail_base = root ~ ('/movies/' if kind == 'movie' else '/shows/') %}
+{% set art_base = root ~ ('/art/movie/' if kind == 'movie' else '/art/tvshow/') %}
+<div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-4">
+  <a class="media-card d-block text-decoration-none" href="{{ detail_base }}{{ item.id }}">
+    <img src="{{ art_base }}{{ item.id }}/poster" alt="{{ item.title }}" loading="lazy" width="300" height="450">
+    <div class="p-2 text-center">
+      <h6 class="mb-0 text-truncate" title="{{ item.title }}">{{ item.title }}</h6>
+      <div class="small-text">
+        {% if item.year %}<span>{{ item.year }}</span>{% endif %}
+        {% if item.rating %} <span class="rating">★ {{ '%.1f'|format(item.rating) }}</span>{% endif %}
+        {% if kind == 'show' %}
+          &middot; <span>{{ item.season_count }} season{{ 's' if item.season_count != 1 }}</span>
+          &middot; <span>{{ item.episode_count }} ep{{ 's' if item.episode_count != 1 }}</span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+</div>
