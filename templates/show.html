@@ -5,9 +5,6 @@
 <a href="{{ root }}/shows" class="small text-secondary">&larr; Back to TV shows</a>
 
 <div class="detail-hero mt-2 mb-4">
-  {% if has_fanart %}
-  <img class="detail-fanart" src="{{ root }}/art/tvshow/{{ show.id }}/fanart" alt="" loading="lazy">
-  {% endif %}
   <div class="detail-hero-body row g-4">
     <div class="col-5 col-md-3 col-lg-2">
       <img class="detail-poster img-fluid" src="{{ root }}/art/tvshow/{{ show.id }}/poster"

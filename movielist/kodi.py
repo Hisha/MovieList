@@ -157,7 +157,7 @@ def normalize_movie(row: dict[str, Any]) -> dict[str, Any]:
         "directors": row.get("directors") or "",
         "studios": row.get("studios") or "",
         "mpaa": row.get("mpaa") or "",
-        "runtime": int(row["runtime"]) if _number(row.get("runtime")) else None,
+        "runtime": round(float(row["runtime"]) / 60) if _number(row.get("runtime")) else None,
         "year": _year(row.get("premiered")),
         "premiered": row.get("premiered") or None,
         "dateadded": row.get("dateadded") or None,
